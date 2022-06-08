@@ -1,33 +1,26 @@
 #include <iostream>
 #include <fftw3.h>
-#include "memory.cpp"
-//#include "io.cpp"
+#include "memory.hpp"
+#include "io.hpp"
 #include <math.h>
 
 using namespace std;
 
-// int **receptors(int step, int nz, int nx);
-// float* ricker(float freq, float h, int N);
-// float** velocity_map(int Lz, int Lx);
-// float cfl_criteria(float **vel, int n, int m, float dz, float dx, float dt);
-// void minimum_wavelenth(float **vel, int n, int m, float fp, float dx);
-// float **laplacian(float **wave, int nz, int nx, float dz, float dx);
-// float **extendModel(float **vel, int nz, int nx, int border);
-// float **taper(int nz, int nx, int border);
-// void buffer_wave(float **buffer, float **wave, int nz, int nx);
-// float **propagator(float *wavelet, float dt, int nt, int souz, int soux, int **rec, int nrecs, float **vel, float dz, float dx, int nz, int nx, int border);
-
 // Receptors position
-int **receptors(int step, int nz, int nx){
+int **receptors(int step, int nx, int z){
     int nr = nx/step + 1; // Number of receptors
     int **rec = allocateMint(2, nr); // Receptors
     // Filling the positions
     for(int r = 0; r < nr; r++){
-        rec[0][r] = 2; // x
-        rec[1][r] = r*step; // z
+        rec[0][r] = z;
+        rec[1][r] = r*step;
     }
 
     return rec;
+}
+
+int **receptors(int step, int nx){
+    return receptors(step, nx, 2);
 }
 
 // Returns the Ricker wavelet values
@@ -38,7 +31,7 @@ float* ricker(float freq, float h, int N){
 
     for(int i = 0; i < N; i++){
         t = i*h;
-        ric[i] = (1 - 2*M_PI*M_PI*freq*freq*(t - t0)*(t - t0))*exp(-M_PI*M_PI*freq*freq*(t - t0)*(t - t0));//pow(M_E, -M_PI*M_PI*freq*freq*(t - t0)*(t - t0));
+        ric[i] = (1 - 2*M_PI*M_PI*freq*freq*(t - t0)*(t - t0))*exp(-M_PI*M_PI*freq*freq*(t - t0)*(t - t0));
     }
 
     return ric;
@@ -199,30 +192,52 @@ void buffer_wave(float **buffer, float **wave, int nz, int nx){
     }
 }
 
-float *sincint(float *wav, int Nin, float dt, float dtp) {
-    if(int(dt/dtp) == 1) {
-        return wav;
+float* sincint(float* y, int Nin, float dt, float dtp) {
+    int scale = int(dt/dtp);
+
+    if(scale == 1) 
+        return y;
+
+    // FFTW lib works with double values
+    double* yDouble = new double [Nin];
+    for(int i = 0; i < Nin; i++) {
+        yDouble[i] = double(y[i]);
     }
 
-    float* wavp = wav;
-    // float *wavp;
-    // double *wavDouble = new double [Nin];
-    // fftw_complex *out;
-    // fftw_plan plan;
+    // Real data DFT
+    fftw_complex* yDFT = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * (Nin/2 + 1));
+    fftw_plan planR2C = fftw_plan_dft_r2c_1d(Nin, yDouble, yDFT, FFTW_ESTIMATE);
+    fftw_execute(planR2C);
 
-    // for(int i = 0; i < Nin; i++) {
-    //     wavDouble[i] = wav[i];
-    // }
-    // out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * (Nin/2 + 1));
+    // Build the output array DFT
+    int Nout = scale*Nin;
+    fftw_complex* yOutDFT = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * (Nout/2 + 1));
+    for(int i = 0; i < Nout/2 + 1; i++) {
+        if (i < Nin/2 + 1) {
+            yOutDFT[i][0] = yDFT[i][0];
+            yOutDFT[i][1] = yDFT[i][1];
+        }
+        else {
+            yOutDFT[i][0] = 0.0;
+            yOutDFT[i][1] = 0.0;
+        }
+    }
 
-    // plan = fftw_plan_dft_r2c_1d(Nin, wavDouble, out, FFTW_MEASURE);
-    
-    // fftw_execute(plan);
+    // Hermitian data DFT
+    double* ypDouble = new double [Nout];
+    fftw_plan planC2R = fftw_plan_dft_c2r_1d(Nout, yOutDFT, ypDouble, FFTW_ESTIMATE);
+    fftw_execute(planC2R);
 
+    // Transform the output from double to float array
+    float* yp = new float [Nout];
+    for(int i = 0; i < Nout; i++) {
+        yp[i] = (float) ypDouble[i];
+    }
 
-    // cout << "Foi" << endl;
+    fftw_destroy_plan(planR2C);
+    fftw_destroy_plan(planC2R);
 
-    return wavp;
+    return yp;
 }
 
 float **propagator(float *wav, float dt, int nt, int souz, int soux, int **rec, int nrecs, float **vel, float dz, float dx, int nz, int nx, int border){
@@ -232,28 +247,36 @@ float **propagator(float *wav, float dt, int nt, int souz, int soux, int **rec, 
     float **wave0 = valueM(0.0, nzb, nxb); // Wave in the past
     float **wave1 = valueM(0.0, nzb, nxb); // Wave in the present
     float **wave2 = valueM(0.0, nzb, nxb); // Wave in the future
-    float **shot = valueM(0.0, nt, nrecs); // Information about the intensity of the wave at the receptors
+    
+    float dtp = cfl_criteria(vel, nz, nx, dx, dz, dt);    // CFL with substitution of dt real to dtp (propagation)
+
+    int ntp = nt*int(dt/dtp);
+    float* wavp = sincint(wav, nt, dt, dtp);
 
     // Main loop
+    float **shot = valueM(0.0, nt, nrecs); // Information about the intensity of the wave at the receptors
     cout << "Initiating propagator...\n";
-    for(int k = 0; k < nt; k++){
-        if(k%(nt/100) == 0){
-            cout << "Progress... " << 100*k/nt << "%\n";
+    for(int k = 0; k < ntp; k++){
+        if(k%(ntp/100) == 0){
+            cout << "Progress... " << 100*k/ntp << "%\n";
         }
         float **lap = laplacian(wave1, nzb, nxb, dz, dx);
 
         // Input source
-        wave1[souz + border][soux + border] += vel[souz + border][soux + border]*vel[souz + border][soux + border]*dt*dt*wav[k];
+        wave1[souz + border][soux + border] += model[souz + border][soux + border]*model[souz + border][soux + border]*dtp*dtp*wavp[k];
 
         // Collect wave intensity at receptors
-        for(int r = 0; r < nrecs; r++){
-            shot[k][r] = wave1[border + rec[0][r]][border + rec[1][r]];
+        if (k%(ntp/nt) == 0) {
+            int t = k/(ntp/nt);
+            for(int r = 0; r < nrecs; r++){
+                shot[t][r] = wave1[border + rec[0][r]][border + rec[1][r]];
+            }
         }
 
         // Wave propagation
         for(int i = 0; i < nzb; i++){
             for(int j = 0; j < nxb; j++){
-                wave2[i][j] = 2*wave1[i][j] - wave0[i][j] + model[i][j]*model[i][j]*dt*dt*lap[i][j];
+                wave2[i][j] = 2*wave1[i][j] - wave0[i][j] + model[i][j]*model[i][j]*dtp*dtp*lap[i][j];
             }
         }
         freeM(lap, nzb);
@@ -266,6 +289,8 @@ float **propagator(float *wav, float dt, int nt, int souz, int soux, int **rec, 
         copy_M_to(wave1, wave0, nzb, nxb);
         copy_M_to(wave2, wave1, nzb, nxb);
     }
+
+    cout << "Propagation completed!" << endl;
 
     // Free memory
     freeM(wave0, nzb);

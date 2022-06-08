@@ -1,69 +1,108 @@
 #include <iostream>
 #include <fstream>
 #include <cassert>
-#include "memory.cpp"
+#include "memory.hpp"
 using namespace std;
 
-// void save_V_to_file(float *V, int N, string file_name);
-// void save_M_to_file(float **M, int n, int m, string file_name);
-// void save_Mint_to_file(int **M, int n, int m, string file_name);
-// void save_T_to_file(float ***T, int numPlanes, int numRows, int numCols, string file_name);
-// float **loadMbin(string file_name, int n, int m);
-// void saveMbin(float **M, int n, int m, string filename);
+// Write an 1-dimensional array to a currently open file, intended to be an auxiliary function
+void write1D(fstream* file, float* A, int n) {
+    for(int k = 0; k < n; k++){
+        *file << A[k] << endl;
+    }
+}
 
-// Save a vector to file
-void save_V_to_file(float *V, int N, string file_name){
+void write1D(fstream* file, int* A, int n) {
+    for(int k = 0; k < n; k++){
+        *file << A[k] << endl;
+    }
+}
+
+
+// Save an array to file
+void saveArray(float *A, int n, string folderPath, string filename){
     fstream file;
-    file.open(file_name, ios::out);
+    string path = folderPath + "/" + filename;
+
+    file.open(path, ios::out);
     assert(file.is_open());
-    for(int k = 0; k < N; k++){
-        file << V[k] << endl;
+    write1D(&file, A, n);
+    file.close();
+}
+
+void saveArray(int *A, int n, string folderPath, string filename){
+    fstream file;
+    string path = folderPath + "/" + filename;
+
+    file.open(path, ios::out);
+    assert(file.is_open());
+    write1D(&file, A, n);
+    file.close();
+}
+
+void saveArray(float **A, int* shape, string folderPath, string filename){
+    fstream file;
+    string path = folderPath + "/" + filename;
+
+    file.open(path, ios::out);
+    assert(file.is_open());
+    for(int i = 0; i < shape[0]; i++){
+        write1D(&file, A[i], shape[1]);
     }
     file.close();
 }
 
-// Save a vector to file
-void save_M_to_file(float **M, int n, int m, string file_name){
+void saveArray(int **A, int* shape, string folderPath, string filename){
     fstream file;
-    file.open(file_name, ios::out);
+    string path = folderPath + "/" + filename;
+
+    file.open(path, ios::out);
     assert(file.is_open());
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < m; j++){
-            file << M[i][j] << " ";
-        }
-        file << endl;
+    for(int i = 0; i < shape[0]; i++){
+        write1D(&file, A[i], shape[1]);
     }
     file.close();
 }
 
-// Save a vector to file
-void save_Mint_to_file(int **M, int n, int m, string file_name){
+void saveArray(float ***A, int* shape, string folderPath, string filename){
     fstream file;
-    file.open(file_name, ios::out);
+    string path = folderPath + "/" + filename;
+
+    file.open(path, ios::out);
     assert(file.is_open());
-    for(int i = 0; i < n; i++){
-        for(int j = 0; j < m; j++){
-            file << M[i][j] << " ";
+    for(int i = 0; i < shape[0]; i++){
+        for(int j = 0; j < shape[1]; j++){
+            write1D(&file, A[i][j], shape[2]);
         }
-        file << endl;
     }
     file.close();
 }
 
-// Save a vector to file
-void save_T_to_file(float ***T, int numPlanes, int numRows, int numCols, string file_name){
-    fstream file;
-    file.open(file_name, ios::out);
-    assert(file.is_open());
-    for(int k = 0; k < numPlanes; k++){
-        for(int i = 0; i < numRows; i++){
-            for(int j = 0; j < numCols; j++){
-                file << T[k][i][j] << " ";
-            }
-            file << endl;
+// Saves an array to binary file
+void saveArrayBin(float **A, int* shape, string folderPath, string filename){
+    ofstream out;
+    string path = folderPath + "/" + filename;
+
+    out.open(path, ios::out | ios::binary);
+    for(int i = 0; i < shape[1]; i++){
+        for(int j = 0; j < shape[0]; j++){
+            out.write(reinterpret_cast<const char*>(&A[j][i]), sizeof(float));
         }
     }
-    file.close();
+    out.close();
+}
+
+void saveArray2FileConfig(int* shape, int dimensions, string folderPath, string filename) {
+    saveArray(shape, dimensions, folderPath, filename + ".config");
+}
+
+void saveShot(float** shot, int* shape, string folderPath, string filename) {
+    saveArrayBin(shot, shape, folderPath, filename + ".bin");
+    saveArray2FileConfig(shape, 2, folderPath, filename);
+}
+
+void save2Arr(float** A, int* shape, string folderPath, string filename) {
+    saveArrayBin(A, shape, folderPath, filename + ".bin");
+    saveArray2FileConfig(shape, 2, folderPath, filename);
 }
 
 // Loads a float matrix from binary file
@@ -90,17 +129,4 @@ float **loadMbin(string file_name, int n, int m){
     freeV(memblock);
 
     return M;
-}
-
-// Saves a float matrix to binary file
-void saveMbin(float **M, int n, int m, string filename){
-    ofstream out;
-
-    out.open(filename, ios::out | ios::binary);
-    for(int j = 0; j < m; j++){
-        for(int i = 0; i < n; i++){
-            out.write(reinterpret_cast<const char*>(&M[i][j]), sizeof(float));
-        }
-    }
-    out.close();
 }

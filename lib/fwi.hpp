@@ -1,4 +1,5 @@
-int **receptors(int step, int nz, int nx);
+int **receptors(int step, int nx, int z);
+int **receptors(int step, int nx);
 float* ricker(float freq, float h, int N);
 float** velocity_map(int Lz, int Lx);
 float cfl_criteria(float **vel, int n, int m, float dz, float dx, float dt);
