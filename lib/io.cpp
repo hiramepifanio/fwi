@@ -91,8 +91,26 @@ void saveArrayBin(float **A, int* shape, string folderPath, string filename){
     out.close();
 }
 
+void save2ArrBin(float **A, int* shape, string folderPath, string filename){
+    ofstream out;
+    string path = folderPath + "/" + filename;
+
+    out.open(path, ios::out | ios::binary);
+    for(int i = 0; i < shape[0]; i++){
+        for(int j = 0; j < shape[1]; j++){
+            out.write(reinterpret_cast<const char*>(&A[i][j]), sizeof(float));
+        }
+    }
+    out.close();
+}
+
 void saveArray2FileConfig(int* shape, int dimensions, string folderPath, string filename) {
     saveArray(shape, dimensions, folderPath, filename + ".config");
+}
+
+void save1Array(float* A, int* shape, string folderPath, string filename) {
+    saveArray(A, shape[0], folderPath, filename + ".txt");
+    saveArray2FileConfig(shape, 1, folderPath, filename);
 }
 
 void saveShot(float** shot, int* shape, string folderPath, string filename) {
@@ -101,7 +119,7 @@ void saveShot(float** shot, int* shape, string folderPath, string filename) {
 }
 
 void save2Arr(float** A, int* shape, string folderPath, string filename) {
-    saveArrayBin(A, shape, folderPath, filename + ".bin");
+    save2ArrBin(A, shape, folderPath, filename + ".bin");
     saveArray2FileConfig(shape, 2, folderPath, filename);
 }
 

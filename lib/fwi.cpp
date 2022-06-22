@@ -80,6 +80,8 @@ float cfl_criteria(float **vel, int n, int m, float dz, float dx, float dt) {
     else
         cout << "False." << endl;
 
+    cout << "The ratio dt/dtp is " << reamos << " with dt = " << dt*1000 << " ms and dtp = " << dtp*1000 << " ms." << endl;
+
     return dtp;
 }
 
@@ -204,6 +206,17 @@ float* sincint(float* y, int Nin, float dt, float dtp) {
         yDouble[i] = double(y[i]);
     }
 
+    double yDoubleMean = 0;
+    for (int i = 0; i < Nin; i++) {
+        double val = yDouble[i];
+        if (val >= 0) 
+            yDoubleMean += val;
+        else
+            yDoubleMean += -val;
+    }
+    yDoubleMean /= Nin;
+    cout << "yDoubleMean: " << yDoubleMean << endl;
+
     // Real data DFT
     fftw_complex* yDFT = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * (Nin/2 + 1));
     fftw_plan planR2C = fftw_plan_dft_r2c_1d(Nin, yDouble, yDFT, FFTW_ESTIMATE);
@@ -228,10 +241,21 @@ float* sincint(float* y, int Nin, float dt, float dtp) {
     fftw_plan planC2R = fftw_plan_dft_c2r_1d(Nout, yOutDFT, ypDouble, FFTW_ESTIMATE);
     fftw_execute(planC2R);
 
+    double ypDoubleMean = 0;
+    for (int i = 0; i < Nout; i++) {
+        double val = ypDouble[i];
+        if (val >= 0) 
+            ypDoubleMean += val;
+        else
+            ypDoubleMean += -val;
+    }
+    ypDoubleMean /= Nout;
+    cout << "ypDoubleMean: " << ypDoubleMean << endl;
+
     // Transform the output from double to float array
     float* yp = new float [Nout];
     for(int i = 0; i < Nout; i++) {
-        yp[i] = (float) ypDouble[i];
+        yp[i] = (float) (yDoubleMean/ypDoubleMean)*ypDouble[i];
     }
 
     fftw_destroy_plan(planR2C);
@@ -253,6 +277,8 @@ float **propagator(float *wav, float dt, int nt, int souz, int soux, int **rec, 
     int ntp = nt*int(dt/dtp);
     float* wavp = sincint(wav, nt, dt, dtp);
 
+    cout << "Interpolation: " << int(dt/dtp) << endl;
+
     // Main loop
     float **shot = valueM(0.0, nt, nrecs); // Information about the intensity of the wave at the receptors
     cout << "Initiating propagator...\n";
@@ -262,23 +288,26 @@ float **propagator(float *wav, float dt, int nt, int souz, int soux, int **rec, 
         }
         float **lap = laplacian(wave1, nzb, nxb, dz, dx);
 
-        // Input source
-        wave1[souz + border][soux + border] += model[souz + border][soux + border]*model[souz + border][soux + border]*dtp*dtp*wavp[k];
-
-        // Collect wave intensity at receptors
-        if (k%(ntp/nt) == 0) {
-            int t = k/(ntp/nt);
-            for(int r = 0; r < nrecs; r++){
-                shot[t][r] = wave1[border + rec[0][r]][border + rec[1][r]];
-            }
-        }
-
         // Wave propagation
         for(int i = 0; i < nzb; i++){
             for(int j = 0; j < nxb; j++){
                 wave2[i][j] = 2*wave1[i][j] - wave0[i][j] + model[i][j]*model[i][j]*dtp*dtp*lap[i][j];
             }
         }
+
+        // Input source
+        wave2[souz + border][soux + border] += model[souz + border][soux + border]*model[souz + border][soux + border]*dtp*dtp*wavp[k];
+
+        // Collect wave intensity at receptors
+        if (k%(ntp/nt) == 0) {
+            int t = k/(ntp/nt);
+            for(int r = 0; r < nrecs; r++){
+                shot[t][r] = wave2[border + rec[0][r]][border + rec[1][r]];
+            }
+        }
+
+        
+
         freeM(lap, nzb);
 
         // Buffering

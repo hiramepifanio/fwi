@@ -13,6 +13,7 @@ float** velocityMap(int nz, int nx);
 
 int main() {
     // Parameters
+    string script = "singleTrace";
     int nz = 61, nx = 161, nt = 600;                // Number of grid points and timesteps
     float dx = 25, dz = 25, dt = 0.002;             // Step size in space and time (m, s)
     int border = 100;                               // Number of points in the border
@@ -30,13 +31,17 @@ int main() {
 
     rec = receptors(recstep, nx, recz);             // Receptors position
     wav = ricker(fp, dt, nt);                       // Getting Ricker wavelet values
-    vel = velocityMap(nz, nx);                      
+    vel = velocityMap(nz, nx);      
+
+    int samplingShape[] = {nx};                      
+    int* sampling = alloc1IntArr(0, samplingShape);
+    sampling[110] = 1;                
 
     // Propagation
     shot = propagator(wav, dt, nt, souz, soux, rec, nrecs, vel, dz, dx, nz, nx, border);
     //saveMbin(shot, nt, nrecs, "data/gradient/shot.bin");
     int shape[] = {nt, nrecs};
-    saveShot(shot, shape, "data/gradient", "shot");
+    saveShot(shot, shape, "data/" + script, "shot");
 
     //Gradient
     float** v0 = valueM(6000, nz, nx);
@@ -71,7 +76,7 @@ int main() {
         if (t%reamos == 0)
             for(int i = 0; i < nz; i++)
                 for(int j = 0; j < nx; j++)
-                    d2u[i][j][t/reamos] = (wave2[i + border][j + border]-2*wave1[i + border][j + border]+wave0[i + border][j + border])/(dt*dt);
+                    d2u[i][j][t/reamos] = (wave2[i + border][j + border]-2*wave1[i + border][j + border]+wave0[i + border][j + border]);
 
         // Buffering
         buffer_wave(buffer, wave2, nzb, nxb);
@@ -88,16 +93,16 @@ int main() {
     }
     cout << "... Completed." << endl; 
 
-    int shapeDiff[] = {nt, nx};
-    save2Arr(diff, shapeDiff, "data/gradient", "diff");
+    // int shapeDiff[] = {nt, nx};
+    // save2Arr(diff, shapeDiff, "data/" + script, "diff");
 
-    float** d2ut = alloc2Arr(0, nz, nx);
-    for(int i = 0; i < nz; i++)
-        for(int j = 0; j < nx; j++)
-            d2ut[i][j] += d2u[i][j][ntp-1];
+    // float** d2ut = alloc2Arr(0, nz, nx);
+    // for(int i = 0; i < nz; i++)
+    //     for(int j = 0; j < nx; j++)
+    //         d2ut[i][j] += d2u[i][j][ntp-1];
 
-    int shapeD2ut[] = {nz, nx};
-    save2Arr(d2ut, shapeD2ut, "data/gradient", "d2ut"); 
+    // int shapeD2ut[] = {nz, nx};
+    // save2Arr(d2ut, shapeD2ut, "data/" + script, "d2ut"); 
 
     wave0 = valueM(0, nza, nxa);
     wave1 = valueM(0, nza, nxa);
@@ -116,7 +121,7 @@ int main() {
             }
         }
         for(int i = 0; i < nx; i++) {
-            wave2[border + recz][border + i] += vel0[recz + border][i + border]*vel0[recz + border][i + border]*dt*dt*diff[nt - t - 1][i];
+            wave2[border + recz][border + i] += sampling[i]*vel0[recz + border][i + border]*vel0[recz + border][i + border]*dt*dt*diff[nt - t - 1][i];
         }
 
         // Buffering
@@ -143,15 +148,15 @@ int main() {
             for(int j = 0; j < nx; j++)
                 grad[i][j] += d2u[i][j][t];
 
-    int shapeD2uSum[] = {nz, nx};
-    save2Arr(grad, shapeD2uSum, "data/gradient", "d2u_sum");  
+    // int shapeD2uSum[] = {nz, nx};
+    // save2Arr(grad, shapeD2uSum, "data/" + script, "d2u_sum");  
     
     for(int i = 0; i < nz; i++)
         for(int j = 0; j < nx; j++)
-            grad[i][j] *= reamos*dt*2/(v0[i][j]*v0[i][j]*v0[i][j]);
+            grad[i][j] *= -reamos*dt;//*2/(v0[i][j]*v0[i][j]*v0[i][j]);
 
     int shape2[] = {nz, nx};
-    save2Arr(grad, shape2, "data/gradient", "grad");
+    save2Arr(grad, shape2, "data/" + script, "grad");
 
     // Free memory
     freeV(wav);

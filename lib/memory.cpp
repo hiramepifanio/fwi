@@ -54,6 +54,24 @@ float **valueM(float value, int numRows, int numCols){
     return M;
 }
 
+int* alloc1IntArr(int value, int* shape, bool fill){
+    int* A = new int [shape[0]];
+
+    if (fill)
+        for (int i = 0; i < shape[0]; i++)
+            A[i] = value;
+
+    return A;
+}
+
+int* alloc1IntArr(int* shape){
+    return alloc1IntArr(0, shape, false);
+}
+
+int* alloc1IntArr(int value, int* shape){
+    return alloc1IntArr(value, shape, true);
+}
+
 // Allocate memory for 3-Array filled with float(value)
 float** alloc2Arr(int numRows, int numCols){
     float **A = new float *[numRows];
