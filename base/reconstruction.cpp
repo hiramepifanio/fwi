@@ -38,7 +38,7 @@ int main() {
 
     // Propagation
     //int nzb = nz + 2*border, nxb = nx + 2*border; // Full grid with borders
-    float **model = extendModel(vel, nz, nx, border); // Velocity model with borders
+    float **model = extend_model(vel, nz, nx, border); // Velocity model with borders
     float **buffer = taper(nz, nx, border); // Scale factor to buffer the wave at the borders
     float **wave0 = valueM(0.0, nzb, nxb); // Wave in the past
     float **wave1 = valueM(0.0, nzb, nxb); // Wave in the present

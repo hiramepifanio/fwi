@@ -73,6 +73,12 @@ int* alloc1IntArr(int value, int* shape){
 }
 
 // Allocate memory for 3-Array filled with float(value)
+float* alloc1Arr(int numRows){
+    float *A = new float [numRows];
+
+    return A;
+}
+
 float** alloc2Arr(int numRows, int numCols){
     float **A = new float *[numRows];
 

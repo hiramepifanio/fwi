@@ -3,6 +3,7 @@
 #include "memory.hpp"
 #include "io.hpp"
 #include <math.h>
+#include "math.hpp"
 
 using namespace std;
 
@@ -54,6 +55,34 @@ float** velocity_map(int Lz, int Lx){
 }
 
 // CFL criteria
+int cfl_criteria_scale(float **vel, int nz, int nx, float dt, float dz, float dx) {
+    float dtp = dt;
+    int scale = 1;
+
+    // Searching for maximum velocity
+    int vel_shape[] = {nz, nx};
+    float vel_max = max(vel, vel_shape);
+
+    // Finding dt propagation
+    dtp = dt/scale; 
+    float CFL = vel_max*dtp*pow(1/(dx*dx) + 1/(dz*dz), 0.5), target = pow(3./4, 0.5);
+    while(CFL > target) {
+        scale++;
+        dtp = dt/scale;
+        CFL = vel_max*dtp*pow(1/(dx*dx) + 1/(dz*dz), 0.5);
+    }
+    
+    cout << "The CFL criteria is " << CFL << " and should be equal to or less than " << target << ": ";
+    if(CFL <= target)
+        cout << "True." << endl;
+    else
+        cout << "False." << endl;
+
+    cout << "The ratio dt/dtp is " << scale << " with dt = " << dt*1000 << " ms and dtp = " << dtp*1000 << " ms." << endl;
+
+    return scale;
+}
+
 float cfl_criteria(float **vel, int n, int m, float dz, float dx, float dt) {
     float vmax = vel[0][0];
     float dtp = dt;
@@ -138,7 +167,7 @@ float **laplacian(float **wave, int nz, int nx, float dz, float dx){
     return lap;
 }
 
-float **extendModel(float **vel, int nz, int nx, int border){
+float **extend_model(float **vel, int nz, int nx, int border){
     float **model = valueM(0.0, nz + 2*border, nx + 2*border);
 
     // Center
@@ -264,9 +293,26 @@ float* sincint(float* y, int Nin, float dt, float dtp) {
     return yp;
 }
 
+float** sincint_shot(float** shot, float dt, float dtp, int nt, int ntp, int nrecs) {
+    float** output = alloc2Arr(0.0, ntp, nrecs);
+    
+    for (int i = 0; i < nrecs; i++) {
+        float* shot_rec = alloc1Arr(nt);
+        for (int t = 0; t < nt; t++)
+            shot_rec[t] = shot[t][i];
+
+        float* sincint_shot_rec = sincint(shot_rec, nt, dt, dtp);
+        for (int tp = 0; tp < ntp; tp++) {
+            output[tp][i] = sincint_shot_rec[tp];
+        }
+    }
+
+    return output;
+}
+
 float **propagator(float *wav, float dt, int nt, int souz, int soux, int **rec, int nrecs, float **vel, float dz, float dx, int nz, int nx, int border){
     int nzb = nz + 2*border, nxb = nx + 2*border; // Full grid with borders
-    float **model = extendModel(vel, nz, nx, border); // Velocity model with borders
+    float **model = extend_model(vel, nz, nx, border); // Velocity model with borders
     float **buffer = taper(nz, nx, border); // Scale factor to buffer the wave at the borders
     float **wave0 = valueM(0.0, nzb, nxb); // Wave in the past
     float **wave1 = valueM(0.0, nzb, nxb); // Wave in the present

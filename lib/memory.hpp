@@ -6,6 +6,7 @@ float **valueM(float value, int numRows, int numCols);
 
 int* alloc1IntArr(int* shape);
 int* alloc1IntArr(int value, int* shape);
+float* alloc1Arr(int numRows);
 
 float** alloc2Arr(int numRows, int numCols);
 float** alloc2Arr(float value, int numRows, int numCols);
