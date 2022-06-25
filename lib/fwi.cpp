@@ -244,7 +244,6 @@ float* sincint(float* y, int Nin, float dt, float dtp) {
             yDoubleMean += -val;
     }
     yDoubleMean /= Nin;
-    cout << "yDoubleMean: " << yDoubleMean << endl;
 
     // Real data DFT
     fftw_complex* yDFT = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * (Nin/2 + 1));
@@ -279,7 +278,6 @@ float* sincint(float* y, int Nin, float dt, float dtp) {
             ypDoubleMean += -val;
     }
     ypDoubleMean /= Nout;
-    cout << "ypDoubleMean: " << ypDoubleMean << endl;
 
     // Transform the output from double to float array
     float* yp = new float [Nout];
@@ -329,9 +327,9 @@ float **propagator(float *wav, float dt, int nt, int souz, int soux, int **rec, 
     float **shot = valueM(0.0, nt, nrecs); // Information about the intensity of the wave at the receptors
     cout << "Initiating propagator...\n";
     for(int k = 0; k < ntp; k++){
-        if(k%(ntp/100) == 0){
-            cout << "Progress... " << 100*k/ntp << "%\n";
-        }
+        // if(k%(ntp/100) == 0){
+        //     cout << "Progress... " << 100*k/ntp << "%\n";
+        // }
         float **lap = laplacian(wave1, nzb, nxb, dz, dx);
 
         // Wave propagation
@@ -342,7 +340,7 @@ float **propagator(float *wav, float dt, int nt, int souz, int soux, int **rec, 
         }
 
         // Input source
-        wave2[souz + border][soux + border] += model[souz + border][soux + border]*model[souz + border][soux + border]*dtp*dtp*wavp[k];
+        wave2[souz + border][soux + border] += model[souz + border][soux + border]*model[souz + border][soux + border]*dtp*dtp*wavp[k]/(dx*dz);
 
         // Collect wave intensity at receptors
         if (k%(ntp/nt) == 0) {

@@ -54,7 +54,7 @@ int main() {
     float** wave1 = valueM(0, nza, nxa);
     float** wave2 = valueM(0, nza, nxa);
     float*** d2u = alloc3Arr(0, nz, nx, ntp);
-    float** vel0 = extendModel(v0, nz, nx, border);
+    float** vel0 = extend_model(v0, nz, nx, border);
     float** diff = alloc2Arr(0, nt, nx);
 
     cout << "Calculating second derivative and difference at surface" << endl;

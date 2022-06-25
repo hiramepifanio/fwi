@@ -11,7 +11,7 @@ data = data.reshape(shape[::-1])
 data = data.T
 
 plt.imshow(data, aspect = 'auto', cmap = 'binary')
-#plt.clim(-data.max()/50,data.max()/50)
-plt.clim(-2,2)
+plt.clim(-data.max()/50,data.max()/50)
+
 plt.colorbar()
 plt.show()

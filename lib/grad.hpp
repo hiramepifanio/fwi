@@ -1,0 +1,2 @@
+float** grad(float* wavelet, float** shot, float** vel, float dt, float dz, float dx, int nt, int nz, int nx, int border, int souz, int soux, int* recz, int* recx, int nrecs);
+float** grad_recon(float* wavelet, float** shot, float** vel, float dt, float dz, float dx, int nt, int nz, int nx, int border, int souz, int soux, int* recz, int* recx, int nrecs);
