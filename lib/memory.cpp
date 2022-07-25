@@ -156,10 +156,8 @@ void freeT(float ***T, int numPlanes, int numRows){
     delete[] T;
 }
 
-void copy_M_to(float **M1, float **M2, int numRows, int numCols){
-    for(int i = 0; i < numRows; i++){
-        for(int j = 0; j < numCols; j++){
-            M2[i][j] = M1[i][j];
-        }
-    }
+void transfer_float2d(float **A, float **B, int* shape) {
+    for(int i = 0; i < shape[0]; i++)
+        for(int j = 0; j < shape[1]; j++)
+            B[i][j] = A[i][j];
 }

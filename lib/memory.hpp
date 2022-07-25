@@ -18,4 +18,5 @@ void freeV(float *V);
 void freeM(float **M, int numRows);
 void freeMint(int **M, int numRows);
 void freeT(float ***T, int numPlanes, int numRows);
-void copy_M_to(float **M1, float **M2, int numRows, int numCols);
+
+void transfer_float2d(float **A, float **B, int* shape);

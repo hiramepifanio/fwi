@@ -4,55 +4,26 @@
 #include "io.hpp"
 #include <math.h>
 #include "math.hpp"
+#include "alloc.hpp"
 
 using namespace std;
 
-// Receptors position
-int **receptors(int step, int nx, int z){
-    int nr = nx/step + 1; // Number of receptors
-    int **rec = allocateMint(2, nr); // Receptors
-    // Filling the positions
-    for(int r = 0; r < nr; r++){
-        rec[0][r] = z;
-        rec[1][r] = r*step;
-    }
+// // Receptors position
+// int **receptors(int step, int nx, int z){
+//     int nr = nx/step + 1; // Number of receptors
+//     int **rec = allocateMint(2, nr); // Receptors
+//     // Filling the positions
+//     for(int r = 0; r < nr; r++){
+//         rec[0][r] = z;
+//         rec[1][r] = r*step;
+//     }
 
-    return rec;
-}
+//     return rec;
+// }
 
-int **receptors(int step, int nx){
-    return receptors(step, nx, 2);
-}
-
-// Returns the Ricker wavelet values
-float* ricker(float freq, float h, int N){
-    float t0 = 6/(M_PI*freq*sqrt(2));
-    float *ric = allocateV(N);
-    float t;
-
-    for(int i = 0; i < N; i++){
-        t = i*h;
-        ric[i] = (1 - 2*M_PI*M_PI*freq*freq*(t - t0)*(t - t0))*exp(-M_PI*M_PI*freq*freq*(t - t0)*(t - t0));
-    }
-
-    return ric;
-}
-
-// Generates the velocity map
-float** velocity_map(int Lz, int Lx){
-    float **M = allocateM(Lz, Lx);
-
-    for(int i = 0; i < Lz; i++){
-        for(int j = 0; j < Lx; j++){
-            if(i < 40)
-                M[i][j] = 2000.0;
-            else
-                M[i][j] = 3000.0;
-        }
-    }
-
-    return M;
-}
+// int **receptors(int step, int nx){
+//     return receptors(step, nx, 2);
+// }
 
 // CFL criteria
 int cfl_criteria_scale(float **vel, int nz, int nx, float dt, float dz, float dx) {
@@ -114,61 +85,24 @@ float cfl_criteria(float **vel, int n, int m, float dz, float dx, float dt) {
     return dtp;
 }
 
-// Minimum wavelength criteria
-void minimum_wavelenth(float **vel, int n, int m, float fp, float dx){
-    float vmin = vel[0][0];
-    for(int i = 0; i < n; i++)
-        for(int j = 0; j < m; j++)
-            if(vel[i][j] < vmin)
-                vmin = vel[i][j];
-    float minlambda = vmin/(3*fp);
-    cout << "The minimum wavelength is " << minlambda << " and should be equal to or bigger than " << 5*dx << ": ";
-    if(minlambda >= 5*dx)
-        cout << "True." << endl;
-    else
-        cout << "False." << endl;
-}
+// // Minimum wavelength criteria
+// void minimum_wavelenth(float **vel, int n, int m, float fp, float dx){
+//     float vmin = vel[0][0];
+//     for(int i = 0; i < n; i++)
+//         for(int j = 0; j < m; j++)
+//             if(vel[i][j] < vmin)
+//                 vmin = vel[i][j];
+//     float minlambda = vmin/(3*fp);
+//     cout << "The minimum wavelength is " << minlambda << " and should be equal to or bigger than " << 5*dx << ": ";
+//     if(minlambda >= 5*dx)
+//         cout << "True." << endl;
+//     else
+//         cout << "False." << endl;
+// }
 
-// Returns the laplacian of the wavestate
-float **laplacian(float **wave, int nz, int nx, float dz, float dx){
-    float **lap = valueM(0.0, nz, nx);
-    float ddx;
-
-    // Derivative in z
-    // Center
-    for(int i = 2; i < nz - 2; i++){
-        for(int j = 0; j < nx; j++){
-            lap[i][j] = (- wave[i + 2][j] + 16*wave[i + 1][j] - 30*wave[i][j] + 16*wave[i - 1][j] - wave[i - 2][j])/(12*dz*dz);
-        }
-    }
-    // The 4 outer rows
-    for(int j = 0; j < nx; j++){
-        lap[0][j] = lap[1][j] = (wave[2][j] - 2*wave[1][j] + wave[0][j])/(dz*dz);
-        lap[nz - 2][j] = lap[nz - 1][j] = (wave[nz - 1][j] - 2*wave[nz - 2][j] + wave[nz - 3][j])/(dz*dz);
-    }
-
-    // Derivative in x
-    // Center
-    for(int j = 2; j < nx - 2; j++){
-        for(int i = 0; i < nz; i++){
-            lap[i][j] += (- wave[i][j + 2] + 16*wave[i][j + 1] - 30*wave[i][j] + 16*wave[i][j - 1] - wave[i][j - 2])/(12*dx*dx);
-        }
-    }
-    // The 4 outer colums
-    for(int i = 0; i < nz; i++){
-        ddx = (wave[i][2] - 2*wave[i][1] + wave[i][0])/(dx*dx);
-        lap[i][0] += ddx;
-        lap[i][1] += ddx;
-        ddx = (wave[i][nx - 1] - 2*wave[i][nx - 2] + wave[i][nx - 3])/(dx*dx);
-        lap[i][nx - 2] += ddx;
-        lap[i][nx - 1] += ddx;
-    }
-
-    return lap;
-}
-
-float **extend_model(float **vel, int nz, int nx, int border){
-    float **model = valueM(0.0, nz + 2*border, nx + 2*border);
+float **extend_model(float **vel, int nz, int nx, int border) {
+    int model_shape[] = {nz + 2*border, nx + 2*border};
+    float **model = alloc_float2d(0.0, model_shape);
 
     // Center
     for(int i = 0; i < nz; i++){
@@ -197,7 +131,8 @@ float **extend_model(float **vel, int nz, int nx, int border){
 }
 
 float **taper(int nz, int nx, int border){
-    float **buffer = valueM(1.0, nz + 2*border, nx + 2*border);
+    int buffer_shape[] = {nz + 2*border, nx + 2*border};
+    float **buffer = alloc_float2d(1.0, buffer_shape);
     float damp = 6.5*border; // Buffering parameter
 
     // Decrease the border
@@ -330,7 +265,8 @@ float **propagator(float *wav, float dt, int nt, int souz, int soux, int **rec, 
         // if(k%(ntp/100) == 0){
         //     cout << "Progress... " << 100*k/ntp << "%\n";
         // }
-        float **lap = laplacian(wave1, nzb, nxb, dz, dx);
+        int lap_shape[] = {nzb, nxb};
+        float **lap = laplacian(wave1, lap_shape, dz, dx);
 
         // Wave propagation
         for(int i = 0; i < nzb; i++){
@@ -340,7 +276,7 @@ float **propagator(float *wav, float dt, int nt, int souz, int soux, int **rec, 
         }
 
         // Input source
-        wave2[souz + border][soux + border] += model[souz + border][soux + border]*model[souz + border][soux + border]*dtp*dtp*wavp[k]/(dx*dz);
+        wave2[souz + border][soux + border] += model[souz + border][soux + border]*model[souz + border][soux + border]*dtp*dtp*wavp[k];// /(dx*dz);
 
         // Collect wave intensity at receptors
         if (k%(ntp/nt) == 0) {
@@ -359,8 +295,9 @@ float **propagator(float *wav, float dt, int nt, int souz, int soux, int **rec, 
         buffer_wave(buffer, wave1, nzb, nxb);
 
         // Roll arrays forward
-        copy_M_to(wave1, wave0, nzb, nxb);
-        copy_M_to(wave2, wave1, nzb, nxb);
+        int wave_shape[] = {nzb, nxb};
+        transfer_float2d(wave1, wave0, wave_shape);
+        transfer_float2d(wave2, wave1, wave_shape);
     }
 
     cout << "Propagation completed!" << endl;

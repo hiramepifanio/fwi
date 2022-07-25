@@ -1,0 +1,1 @@
+float* ricker(float freq, float h, int N);

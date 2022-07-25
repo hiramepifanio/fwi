@@ -1,2 +1,4 @@
 float max(float** A, int* shape);
-float** vel_dtp_2(float** vel, int nz, int nx, float dtp);
+float min(float** A, int* shape);
+float **laplacian(float **wave, int* wave_shape, float dz, float dx);
+float** vel_dt_2(float** vel, int* vel_shape, float dt);

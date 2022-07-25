@@ -20,6 +20,7 @@ void write1D(fstream* file, int* A, int n) {
 
 // Save an array to file
 void saveArray(float *A, int n, string folderPath, string filename){
+    cout << "Saving array to "+folderPath+"/"+filename+"... ";
     fstream file;
     string path = folderPath + "/" + filename;
 
@@ -27,9 +28,12 @@ void saveArray(float *A, int n, string folderPath, string filename){
     assert(file.is_open());
     write1D(&file, A, n);
     file.close();
+
+    cout << "Donne." << endl;
 }
 
 void saveArray(int *A, int n, string folderPath, string filename){
+    cout << "Saving array to "+folderPath+"/"+filename+"... ";
     fstream file;
     string path = folderPath + "/" + filename;
 
@@ -37,6 +41,8 @@ void saveArray(int *A, int n, string folderPath, string filename){
     assert(file.is_open());
     write1D(&file, A, n);
     file.close();
+
+    cout << "Donne." << endl;
 }
 
 void saveArray(float **A, int* shape, string folderPath, string filename){

@@ -1,0 +1,33 @@
+g++ *.cpp ../lib/*.cpp -o main -lfftw3 && ./main
+
+
+case=grads &&
+local=/home/hiram/vscode-workspace/fwi/$case &&
+cd $local &&
+g++ $case.cpp ../lib/*.cpp -o $case -lfftw3 &&
+./$case
+
+
+case=grads &&
+local=/home/hiram/vscode-workspace/fwi/$case &&
+cd $local/scripts &&
+python3 plot_shot.py;
+cd $local
+
+case=grads &&
+local=/home/hiram/vscode-workspace/fwi/$case &&
+cd $local &&
+g++ $case.cpp ../lib/*.cpp -o $case -lfftw3 &&
+./$case &&
+cd $local/scripts &&
+python3 plot_grad_diff.py;
+cd $local
+
+case=ricker_wavelet &&
+local=/home/hiram/vscode-workspace/fwi/$case &&
+cd $local &&
+g++ $case.cpp ../lib/*.cpp -o $case -lfftw3 &&
+./$case &&
+cd $local/scripts &&
+python3 plot_array.py;
+cd $local
